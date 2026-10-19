@@ -23,72 +23,36 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pocketpos.ui.components.PosButton
 import com.pocketpos.ui.components.PosProductCard
 import com.pocketpos.ui.theme.PosColors
-import kotlinx.coroutines.launch
-
-private data class SampleProduct(
-    val id: Int,
-    val name: String,
-    val category: String,
-    val priceCents: Long,
-    val stockQuantity: Int
-)
 
 @Composable
-fun InventoryScreen() {
+fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
     var searchQuery by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
 
-    val products = remember {
-        listOf(
-            SampleProduct(
-                id = 1,
-                name = "Café Premium",
-                category = "Bebidas",
-                priceCents = 250,
-                stockQuantity = 24
-            ),
-            SampleProduct(
-                id = 2,
-                name = "Agua Mineral",
-                category = "Bebidas",
-                priceCents = 120,
-                stockQuantity = 4
-            ),
-            SampleProduct(
-                id = 3,
-                name = "Croissant",
-                category = "Panadería",
-                priceCents = 180,
-                stockQuantity = 12
-            ),
-            SampleProduct(
-                id = 4,
-                name = "Zumo de naranja",
-                category = "Bebidas",
-                priceCents = 295,
-                stockQuantity = 0
-            )
-        )
-    }
+    val products by viewModel.products.collectAsState()
+    val totalCount by viewModel.totalCount.collectAsState()
+    val lowStockCount by viewModel.lowStockCount.collectAsState()
+    val outOfStockCount by viewModel.outOfStockCount.collectAsState()
 
-    val filteredProducts = products.filter { product ->
-        product.name.contains(searchQuery, ignoreCase = true) ||
-                product.category.contains(searchQuery, ignoreCase = true)
+    LaunchedEffect(searchQuery) { viewModel.onQueryChange(searchQuery) }
+    LaunchedEffect(Unit) {
+        viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
     }
 
     Scaffold(
@@ -158,23 +122,19 @@ fun InventoryScreen() {
             ) {
                 SummaryCard(
                     title = "Productos",
-                    value = products.size.toString(),
+                    value = totalCount.toString(),
                     modifier = Modifier.weight(1f)
                 )
 
                 SummaryCard(
                     title = "Stock bajo",
-                    value = products.count {
-                        it.stockQuantity in 1..5
-                    }.toString(),
+                    value = lowStockCount.toString(),
                     modifier = Modifier.weight(1f)
                 )
 
                 SummaryCard(
                     title = "Agotados",
-                    value = products.count {
-                        it.stockQuantity == 0
-                    }.toString(),
+                    value = outOfStockCount.toString(),
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -194,7 +154,7 @@ fun InventoryScreen() {
                 )
 
                 Text(
-                    text = "${filteredProducts.size} resultados",
+                    text = "${products.size} resultados",
                     fontSize = 12.sp,
                     color = PosColors.TextSecondary
                 )
@@ -208,18 +168,18 @@ fun InventoryScreen() {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(
-                    items = filteredProducts,
-                    key = { it.id }
-                ) { product ->
+                    items = products,
+                    key = { it.product.id }
+                ) { item ->
                     PosProductCard(
-                        name = product.name,
-                        category = product.category,
-                        priceCents = product.priceCents,
-                        stockQuantity = product.stockQuantity
+                        name = item.product.name,
+                        category = item.category?.name ?: "Sin categoría",
+                        priceCents = item.product.priceCents,
+                        stockQuantity = item.product.stockQuantity
                     )
                 }
 
-                if (filteredProducts.isEmpty()) {
+                if (products.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -238,13 +198,7 @@ fun InventoryScreen() {
 
             PosButton(
                 text = "+  Nuevo producto",
-                onClick = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar(
-                            "El formulario se implementará en el siguiente paso."
-                        )
-                    }
-                },
+                onClick = viewModel::addTestProduct,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         }
