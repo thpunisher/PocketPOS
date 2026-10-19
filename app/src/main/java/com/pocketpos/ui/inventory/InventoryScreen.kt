@@ -40,7 +40,10 @@ import com.pocketpos.ui.components.PosProductCard
 import com.pocketpos.ui.theme.PosColors
 
 @Composable
-fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
+fun InventoryScreen(
+    onAddProduct: () -> Unit,
+    viewModel: InventoryViewModel = viewModel()
+) {
     var searchQuery by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -51,9 +54,6 @@ fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
     val outOfStockCount by viewModel.outOfStockCount.collectAsState()
 
     LaunchedEffect(searchQuery) { viewModel.onQueryChange(searchQuery) }
-    LaunchedEffect(Unit) {
-        viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
-    }
 
     Scaffold(
         containerColor = PosColors.Background,
@@ -107,6 +107,8 @@ fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
                     Text("Buscar productos...")
                 },
                 colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = PosColors.TextPrimary,
+                    unfocusedTextColor = PosColors.TextPrimary,
                     focusedBorderColor = PosColors.Primary,
                     unfocusedBorderColor = PosColors.Border,
                     focusedContainerColor = PosColors.Surface,
@@ -198,7 +200,7 @@ fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
 
             PosButton(
                 text = "+  Nuevo producto",
-                onClick = viewModel::addTestProduct,
+                onClick = onAddProduct,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         }

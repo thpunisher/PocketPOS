@@ -16,6 +16,12 @@ class ProductRepository(private val db: PocketPosDatabase) {
         db.withTransaction {
             if (product.name.isBlank()) throw PosException("El nombre es obligatorio")
             if (product.priceCents < 0) throw PosException("El precio no es válido")
+            product.barcode?.let {
+                if (productDao.countByBarcode(it) > 0) throw PosException("Ya existe un producto con ese código de barras")
+            }
+            product.sku?.let {
+                if (productDao.countBySku(it) > 0) throw PosException("Ya existe un producto con esa referencia (SKU)")
+            }
 
             val initialStock = if (product.trackStock) product.stockQuantity else 0
             val id = productDao.insert(product.copy(id = 0, stockQuantity = 0))

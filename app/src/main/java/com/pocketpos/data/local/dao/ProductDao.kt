@@ -21,6 +21,13 @@ interface ProductDao {
     @Query("SELECT COUNT(*) FROM products")
     suspend fun count(): Int
 
+    /** Includes inactive products, because the unique index does too. */
+    @Query("SELECT COUNT(*) FROM products WHERE barcode = :barcode")
+    suspend fun countByBarcode(barcode: String): Int
+
+    @Query("SELECT COUNT(*) FROM products WHERE sku = :sku")
+    suspend fun countBySku(sku: String): Int
+
     @Query("SELECT * FROM products WHERE id = :id")
     suspend fun getById(id: Long): ProductEntity?
 
